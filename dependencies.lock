@@ -15,6 +15,16 @@ dependencies:
     - esp32c6
     - esp32p4
     version: 0.3.6
+  espressif/cjson:
+    component_hash: e788323270d90738662d66fffa910bfe1fba019bba087f01557e70c40485b469
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.7.19~2
   idf:
     source:
       type: idf
@@ -31,8 +41,9 @@ dependencies:
     version: 1.4.2
 direct_dependencies:
 - esphome/esp-hub75
+- espressif/cjson
 - idf
 - pedrominatel/shtc3
-manifest_hash: 9c40c622b65ed81a0ddb86dc2dc633988454cbaf3824e947d71613e5cca581c1
+manifest_hash: 95be04d497499ff10bd9d8afa4d5339a5e7e29ba1e5f7934adbbde1e6b4f51c4
 target: esp32s3
 version: 2.0.0
