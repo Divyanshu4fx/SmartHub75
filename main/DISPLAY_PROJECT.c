@@ -66,6 +66,8 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include "time.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -78,9 +80,14 @@
 #include "esp_netif_sntp.h"
 #include "esp_sntp.h"
 #include "nvs_flash.h"
-#include "driver/gpio.h"
+
 #include "cJSON.h"
-#include "time.h"
+#include "shtc3.h"
+
+
+#include "driver/i2c_master.h"
+#include "driver/gpio.h"
+
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
@@ -108,6 +115,16 @@ static EventGroupHandle_t s_wifi_event_group;
 static const char *TAG = "DISPLAY_PROJECT";
 
 static int s_retry_num = 0;
+
+typedef struct {
+    char main[25];
+    float temp; // °C
+    float feels_like; // °C
+    int pressure; // hpa
+    int humidity; // %
+    float wind_speed; // m/s
+    int wind_dirc; // ° deg
+} weather_data_t;
 
 void setup_time(void)
 {
@@ -245,7 +262,42 @@ void http_get_weather_task(void *arg)
         int status = esp_http_client_get_status_code(client);
         if (status == 200)
         {
-            ESP_LOGI(TAG, "Response : %s", response_buf);
+            // ESP_LOGI(TAG, "Response : %s", response_buf);
+            cJSON *json = cJSON_Parse(response_buf);
+            if (json != NULL)
+            {
+                ESP_LOGI(TAG, "JSON Parsing Successful");
+                weather_data_t weather_data;
+
+                cJSON* weather = cJSON_GetObjectItem(json, "weather");
+                cJSON* weather_item = NULL;
+                cJSON_ArrayForEach(weather_item, weather)
+                {
+                    snprintf(weather_data.main, sizeof(weather_data.main), "%s", cJSON_GetObjectItem(weather_item, "main")->valuestring);
+                }
+                cJSON *main = cJSON_GetObjectItem(json, "main");
+                weather_data.temp = cJSON_GetObjectItem(main,"temp")->valuedouble;
+                weather_data.feels_like = cJSON_GetObjectItem(main,"feels_like")->valuedouble;
+                weather_data.pressure = cJSON_GetObjectItem(main,"pressure")->valueint;
+                weather_data.humidity = cJSON_GetObjectItem(main,"humidity")->valueint;
+                cJSON *wind = cJSON_GetObjectItem(json, "wind");
+                weather_data.wind_speed = cJSON_GetObjectItem(wind,"speed")->valuedouble;
+                weather_data.wind_dirc = cJSON_GetObjectItem(wind,"deg")->valueint;
+
+                ESP_LOGI(TAG, "Weather Data : main=%s, temp=%.2f, feels_like=%.2f, pressure=%d, humidity=%d, wind_speed=%.2f, wind_dirc=%d",
+                         weather_data.main,
+                         weather_data.temp,
+                         weather_data.feels_like,
+                         weather_data.pressure,
+                         weather_data.humidity,
+                         weather_data.wind_speed,
+                         weather_data.wind_dirc);
+            cJSON_Delete(json);
+            }
+            else
+            {
+                ESP_LOGE(TAG, "Failed to parse JSON response");
+            }
         }
         else
         {
@@ -267,6 +319,31 @@ while(1)
     // }
 }
 
+
+void local_temp_humdity_task(void *arg)
+{
+    i2c_master_bus_config_t i2c_config ={
+        .i2c_port = I2C_NUM_0,
+        .sda_io_num = GPIO_NUM_47,
+        .scl_io_num = GPIO_NUM_48,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+
+    i2c_master_bus_handle_t i2c_handle;
+
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_config,&i2c_handle));
+    ESP_LOGI(TAG, "I2C bus initialized successfully");
+
+    i2c_master_dev_handle_t shtc3_handle = shtc3_device_create(i2c_handle, SHTC3_I2C_ADDR, CONFIG_SHTC3_I2C_CLK_SPEED_HZ);
+
+    float temperature = 0.0f;
+    float humidity = 0;
+    shtc3_get_th(shtc3_handle, SHTC3_REG_T_CSE_NM,&temperature, &humidity);
+    ESP_LOGI(TAG, "Local Temperature: %.2f°C, Humidity: %d%%", temperature, humidity);
+}
+
 void app_main(void)
 {
     // ESP_LOGI("DISPLAY_PROJECT", "Hello, World!");
@@ -281,6 +358,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Starting Weather Task");
     setup_time();
     xTaskCreate(http_get_weather_task, "http_get_weather_task", 4096, NULL, 5, NULL);
+    xTaskCreate(local_temp_humdity_task, "local_temp_humdity_task", 4096, NULL, 5, NULL);
     while(1)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
