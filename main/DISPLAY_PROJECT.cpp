@@ -72,6 +72,8 @@ typedef struct
 } weather_data_t;
 
 static weather_data_t g_weather = {.is_valid = false};
+static bool g_weather_online = false;
+static bool g_time_synced = false;
 static float g_env_temp = 0.0f;
 static float g_env_hum = 0.0f;
 static bool g_shtc3_ok = false;
@@ -96,6 +98,8 @@ static char g_destLine[128];
 static bool g_flightActive = false;
 static uint64_t g_flightStartMs = 0;
 const uint64_t FLIGHT_DISPLAY_MS = 30000;
+static uint8_t g_brightness = 75;
+static uint8_t g_applied_brightness = 0;
 
 static SemaphoreHandle_t data_mutex;
 
@@ -797,7 +801,11 @@ void setup_time(void)
         esp_netif_sntp_init(&config);
         if (esp_netif_sntp_sync_wait(pdMS_TO_TICKS(5000)) != ESP_OK)
             ESP_LOGE(TAG, "Failed to sync time via SNTP timeout(5s)");
+        else
+            g_time_synced = true;
     }
+    else
+        g_time_synced = true;
 }
 
 static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
@@ -870,6 +878,7 @@ void http_get_weather_task(void *arg)
         memset(response_buf, 0, BUFF_SIZE);
         esp_http_client_handle_t client = esp_http_client_init(&config);
         esp_err_t err = esp_http_client_perform(client);
+        bool weather_request_ok = false;
 
         if (err == ESP_OK && esp_http_client_get_status_code(client) == 200)
         {
@@ -897,10 +906,14 @@ void http_get_weather_task(void *arg)
                         g_weather.wind_speed = speed_obj->valuedouble;
                 }
                 g_weather.is_valid = true;
+                weather_request_ok = true;
                 xSemaphoreGive(data_mutex);
                 cJSON_Delete(json);
             }
         }
+        xSemaphoreTake(data_mutex, portMAX_DELAY);
+        g_weather_online = weather_request_ok;
+        xSemaphoreGive(data_mutex);
         esp_http_client_cleanup(client);
         vTaskDelay(pdMS_TO_TICKS(10 * 60 * 1000)); // Every 10 mins
     }
@@ -930,18 +943,145 @@ void local_temp_humdity_task(void *arg)
 }
 
 // ================================================================
-// WEB SERVER (Flight POSTs)
+// WEB SERVER
 // ================================================================
 static esp_err_t get_handler(httpd_req_t *req)
 {
-    const char *resp = g_flightActive ? "Matrix dashboard online\nFlight mode: ACTIVE" : "Matrix dashboard online\nFlight mode: idle";
-    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    static const char dashboard[] = R"html(
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MatrixCast Dashboard</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#07111f;color:#e9f3ff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% 0,#12345d 0,#07111f 42%,#040912 100%)}
+main{width:min(720px,100%);margin:auto;padding:28px 18px 40px}.brand{display:flex;align-items:center;gap:13px;margin-bottom:28px}
+.logo{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#0bd7ff;color:#03101d;font-size:22px;font-weight:900;box-shadow:0 0 28px #0bd7ff66}
+h1{font-size:1.45rem;margin:0}.sub{color:#8fa9c8;font-size:.88rem;margin-top:3px}.card{background:#0d1b2cdd;border:1px solid #1c3957;border-radius:18px;padding:21px;margin:14px 0;box-shadow:0 12px 30px #0003}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.label{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#8fa9c8;font-weight:700}
+.value{font-size:2.8rem;font-weight:800;color:#fff}.unit{font-size:1rem;color:#8fa9c8;font-weight:600}.range{width:100%;accent-color:#0bd7ff;cursor:pointer}.scale{display:flex;justify-content:space-between;color:#718cae;font-size:.72rem;margin-top:8px}
+.btn{border:1px solid #2a5277;background:#122a43;color:#dff5ff;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer}.btn:hover{background:#1b3d5d;border-color:#0bd7ff}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.stat{background:#091524;border-radius:12px;padding:15px}.stat b{display:block;color:#fff;font-size:1.05rem;margin-top:7px}.online{color:#38e6a0!important}.offline{color:#ff7785!important}.flight{color:#ffd166!important}
+.flight-detail{color:#dcecff;line-height:1.6;margin:0}.muted{color:#718cae}.hint{color:#8fa9c8;font-size:.82rem;line-height:1.5;margin:16px 0 0}.toast{min-height:20px;color:#38e6a0;font-size:.82rem;margin-top:12px}
+@media(max-width:450px){main{padding:22px 14px}.value{font-size:2.35rem}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<header class="brand"><div class="logo">*</div><div><h1>MatrixCast</h1><div class="sub">LED matrix control center</div></div></header>
+<section class="card">
+  <div class="card-head"><span class="label">Brightness</span><span><span id="value" class="value">--</span><span class="unit"> / 75</span></span></div>
+  <input id="slider" class="range" type="range" min="1" max="75" value="75" aria-label="Display brightness">
+  <div class="scale"><span>1 · Dim</span><span>Comfort</span><span>75 · Maximum</span></div>
+  <div id="toast" class="toast"></div>
+</section>
+<section class="card"><div class="card-head"><span class="label">System status</span><button id="refresh" class="btn">Refresh</button></div>
+  <div class="grid"><div class="stat"><span class="label">Time sync</span><b id="time">Loading...</b></div><div class="stat"><span class="label">Weather</span><b id="weather">Loading...</b></div></div>
+  <p class="hint">Time is synchronized from the internet when available. Weather keeps the last valid reading if the service goes offline.</p>
+</section>
+<section class="card"><div class="card-head"><span class="label">Last flight</span><span id="flight-status" class="muted">No flight yet</span></div>
+  <p id="flight" class="flight-detail"><span class="muted">No flight information received.</span></p>
+</section>
+</main>
+<script>
+const slider=document.getElementById('slider'),value=document.getElementById('value'),toast=document.getElementById('toast'),time=document.getElementById('time'),weather=document.getElementById('weather'),flight=document.getElementById('flight'),flightStatus=document.getElementById('flight-status');
+let timer;
+function show(v){value.textContent=v;slider.value=v}
+async function setBrightness(v){show(v);clearTimeout(timer);timer=setTimeout(async()=>{try{let r=await fetch('/brightness',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({brightness:Number(v)})});if(!r.ok)throw Error();toast.textContent='Brightness updated';setTimeout(()=>toast.textContent='',1800)}catch(e){toast.textContent='Could not update brightness'}} ,120)}
+async function refresh(){try{let r=await fetch('/api/status');let d=await r.json();show(d.brightness);time.textContent=d.time_synced?'Online':'Offline';time.className=d.time_synced?'online':'offline';weather.textContent=d.weather_online?'Online':'Offline';weather.className=d.weather_online?'online':'offline';flightStatus.textContent=d.flight_active?'Currently displaying':'Saved record';flightStatus.className=d.flight_active?'flight':'muted';flight.textContent='';if(d.last_flight){let name=document.createElement('b');name.textContent=d.last_flight.callsign;flight.append(name, ' | '+d.last_flight.model, document.createElement('br'), d.last_flight.origin+' -> '+d.last_flight.destination)}else{let empty=document.createElement('span');empty.className='muted';empty.textContent='No flight information received.';flight.append(empty)}}catch(e){time.textContent='Unavailable';weather.textContent='Unavailable'}}
+slider.addEventListener('input',e=>setBrightness(e.target.value));document.getElementById('refresh').onclick=refresh;refresh();
+</script></body></html>
+)html";
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    httpd_resp_send(req, dashboard, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+static esp_err_t get_status_handler(httpd_req_t *req)
+{
+    bool flight_active, weather_online, time_synced;
+    uint8_t brightness;
+    flight_info_t last_flight;
+    xSemaphoreTake(data_mutex, portMAX_DELAY);
+    flight_active = g_flightActive;
+    brightness = g_brightness;
+    weather_online = g_weather_online;
+    time_synced = g_time_synced;
+    last_flight = g_flight;
+    xSemaphoreGive(data_mutex);
+
+    cJSON *response_json = cJSON_CreateObject();
+    cJSON_AddNumberToObject(response_json, "brightness", brightness);
+    cJSON_AddBoolToObject(response_json, "flight_active", flight_active);
+    cJSON_AddBoolToObject(response_json, "weather_online", weather_online);
+    cJSON_AddBoolToObject(response_json, "time_synced", time_synced);
+    bool has_flight = last_flight.callsign[0] != '\0';
+    cJSON_AddBoolToObject(response_json, "has_last_flight", has_flight);
+    if (has_flight)
+    {
+        cJSON *flight = cJSON_CreateObject();
+        cJSON_AddStringToObject(flight, "callsign", last_flight.callsign);
+        cJSON_AddStringToObject(flight, "model", last_flight.model);
+        cJSON_AddStringToObject(flight, "origin", last_flight.originIata);
+        cJSON_AddStringToObject(flight, "destination", last_flight.destIata);
+        cJSON_AddItemToObject(response_json, "last_flight", flight);
+    }
+    char *response = cJSON_PrintUnformatted(response_json);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
+    cJSON_free(response);
+    cJSON_Delete(response_json);
+    return ESP_OK;
+}
+
+static esp_err_t post_brightness_handler(httpd_req_t *req)
+{
+    char buf[96];
+    int ret, remaining = req->content_len;
+    if (remaining <= 0 || remaining >= sizeof(buf))
+    {
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_send(req, "{\"error\":\"brightness JSON is required\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    ret = httpd_req_recv(req, buf, remaining);
+    if (ret != remaining)
+    {
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_send(req, "{\"error\":\"incomplete request body\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_FAIL;
+    }
+    buf[ret] = '\0';
+
+    cJSON *json = cJSON_Parse(buf);
+    cJSON *brightness = json ? cJSON_GetObjectItem(json, "brightness") : NULL;
+    if (!brightness || !cJSON_IsNumber(brightness) || brightness->valuedouble < 1 ||
+        brightness->valuedouble > 75 || brightness->valuedouble != brightness->valueint)
+    {
+        cJSON_Delete(json);
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "{\"error\":\"brightness must be an integer from 1 to 75\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    xSemaphoreTake(data_mutex, portMAX_DELAY);
+    g_brightness = (uint8_t)brightness->valueint;
+    xSemaphoreGive(data_mutex);
+    cJSON_Delete(json);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, "{\"status\":\"ok\"}", HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
 static esp_err_t post_clear_handler(httpd_req_t *req)
 {
+    xSemaphoreTake(data_mutex, portMAX_DELAY);
     g_flightActive = false;
+    xSemaphoreGive(data_mutex);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, "{\"status\":\"ok\"}", HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
@@ -993,10 +1133,14 @@ static httpd_handle_t start_webserver(void)
     if (httpd_start(&server, &config) == ESP_OK)
     {
         httpd_uri_t uri_get = {.uri = "/", .method = HTTP_GET, .handler = get_handler, .user_ctx = NULL};
+        httpd_uri_t uri_status = {.uri = "/api/status", .method = HTTP_GET, .handler = get_status_handler, .user_ctx = NULL};
+        httpd_uri_t uri_brightness = {.uri = "/brightness", .method = HTTP_POST, .handler = post_brightness_handler, .user_ctx = NULL};
         httpd_uri_t uri_flight = {.uri = "/flight", .method = HTTP_POST, .handler = post_flight_handler, .user_ctx = NULL};
         httpd_uri_t uri_clear = {.uri = "/clear", .method = HTTP_POST, .handler = post_clear_handler, .user_ctx = NULL};
 
         httpd_register_uri_handler(server, &uri_get);
+        httpd_register_uri_handler(server, &uri_status);
+        httpd_register_uri_handler(server, &uri_brightness);
         httpd_register_uri_handler(server, &uri_flight);
         httpd_register_uri_handler(server, &uri_clear);
     }
@@ -1008,6 +1152,10 @@ static httpd_handle_t start_webserver(void)
 // ================================================================
 void display_task(void *arg)
 {
+    xSemaphoreTake(data_mutex, portMAX_DELAY);
+    uint8_t initial_brightness = g_brightness;
+    xSemaphoreGive(data_mutex);
+
     Hub75Config config{};
     config.panel_width = 64;
     config.panel_height = 64;
@@ -1035,7 +1183,7 @@ void display_task(void *arg)
 
     // Enabling double buffering to completely eliminate flicker
     config.double_buffer = true;
-    config.brightness = 5;
+    config.brightness = initial_brightness;
 
     Hub75Driver driver(config);
     g_driver = &driver;
@@ -1044,6 +1192,7 @@ void display_task(void *arg)
         ESP_LOGE(TAG, "HUB75 init failed");
         vTaskDelete(NULL);
     }
+    g_applied_brightness = initial_brightness;
 
     UG_GUI gui;
     UG_Init(&gui, pset, 64, 64);
@@ -1051,6 +1200,15 @@ void display_task(void *arg)
     while (1)
     {
         uint64_t nowMs = esp_timer_get_time() / 1000;
+
+        xSemaphoreTake(data_mutex, portMAX_DELAY);
+        uint8_t requested_brightness = g_brightness;
+        xSemaphoreGive(data_mutex);
+        if (requested_brightness != g_applied_brightness)
+        {
+            driver.set_brightness(requested_brightness);
+            g_applied_brightness = requested_brightness;
+        }
 
         if (g_flightActive && (nowMs - g_flightStartMs >= FLIGHT_DISPLAY_MS))
         {
