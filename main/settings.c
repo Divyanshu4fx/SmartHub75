@@ -9,7 +9,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
-#define SETTINGS_NAMESPACE "matrixcast"
+#define SETTINGS_NAMESPACE "smarthub75"
 
 app_settings_t g_settings;
 EventGroupHandle_t settings_events;

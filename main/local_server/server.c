@@ -128,7 +128,7 @@ static esp_err_t get_handler(httpd_req_t *req)
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MatrixCast Dashboard</title>
+<title>SmartHUB75 Dashboard</title>
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#07111f;color:#e9f3ff}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% 0,#12345d 0,#07111f 42%,#040912 100%)}
@@ -144,7 +144,7 @@ h1{font-size:1.45rem;margin:0}.sub{color:#8fa9c8;font-size:.88rem;margin-top:3px
 </style>
 </head>
 <body><main>
-<header class="brand"><div class="logo">*</div><div><h1>MatrixCast</h1><div class="sub">LED matrix control center</div></div></header>
+<header class="brand"><div class="logo">*</div><div><h1>SmartHUB75</h1><div class="sub">LED matrix control center</div></div></header>
 <section class="card">
   <div class="card-head"><span class="label">Brightness</span><span><span id="value" class="value">--</span><span class="unit"> / 75</span></span></div>
   <input id="slider" class="range" type="range" min="1" max="75" value="75" aria-label="Display brightness">

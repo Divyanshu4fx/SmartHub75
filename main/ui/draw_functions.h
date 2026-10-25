@@ -21,6 +21,7 @@ void drawFlightZone(uint64_t elapsed);
 void drawSeparators(int sec, bool showSep2);
 void drawBorder(bool animate);
 void drawProvisioningQr(void);
+void drawWifiStartup(void);
 
 #ifdef __cplusplus
 }

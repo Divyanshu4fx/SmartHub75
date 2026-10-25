@@ -260,6 +260,14 @@ void drawProvisioningQr(void)
     drawCentered("WIFI SETUP", 55, DISPLAY_MY_CYAN, false);
 }
 
+void drawWifiStartup(void)
+{
+    drawCentered("Smart", 20, DISPLAY_MY_CYAN, true);
+    drawCentered("Matrix", 26, DISPLAY_MY_CYAN, true);
+    drawCentered("CONNECTING", 38, DISPLAY_WHITE, false);
+    drawCentered("WIFI...", 47, DISPLAY_LIGHT_BLUE, false);
+}
+
 void drawSeparators(int sec, bool showSep2)
 {
     UG_FillFrame(IN_L, SEP1_Y, IN_L + IN_W - 1, SEP1_Y + 1, DISPLAY_SEP_DIM);

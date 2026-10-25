@@ -76,10 +76,10 @@ void initialize_wifi(void)
     if (!provisioned)
     {
         char service_name[20];
-        snprintf(service_name, sizeof(service_name), "MatrixCast-%02X%02X",
+        snprintf(service_name, sizeof(service_name), "SmartHUB75-%02X%02X",
                  (unsigned)esp_random() & 0xFF, (unsigned)(esp_random() >> 8) & 0xFF);
         ESP_LOGI("wifi", "No Wi-Fi credentials. Connect to AP %s and provision the device.", service_name);
-        static const char *const provisioning_pop = "MatrixCast";
+        static const char *const provisioning_pop = "SmartHUB75";
         char payload[128];
         snprintf(payload, sizeof(payload),
                  "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"softap\"}",
@@ -99,11 +99,17 @@ void initialize_wifi(void)
     }
     else
     {
+        xSemaphoreTake(data_mutex, portMAX_DELAY);
+        g_wifi_startup_active = true;
+        xSemaphoreGive(data_mutex);
         wifi_prov_mgr_deinit();
         start_station();
     }
 
     xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    xSemaphoreTake(data_mutex, portMAX_DELAY);
+    g_wifi_startup_active = false;
+    xSemaphoreGive(data_mutex);
 }
 
 

@@ -1,11 +1,11 @@
-# MatrixCast
+# SmartHUB75
 
-MatrixCast is an ESP32-S3 smart dashboard for a 64x64 HUB75 RGB LED matrix. It combines an NTP-synchronized clock, local SHTC3 temperature and humidity readings, live OpenWeather data, and an animated flight-information overlay controlled through a local REST API.
+SmartHUB75 is an ESP32-S3 smart dashboard for a 64x64 HUB75 RGB LED matrix. It combines an NTP-synchronized clock, local SHTC3 temperature and humidity readings, live OpenWeather data, and an animated flight-information overlay controlled through a local REST API.
 
 The display is designed for glanceable information: the normal view shows time, date, indoor climate, and outdoor weather, while a flight event temporarily replaces the lower dashboard area with aircraft pixel art, callsign/model information, and scrolling origin and destination marquees.
 
-<!-- IMAGE PLACEHOLDER: Replace with a hero photo of the completed MatrixCast display. -->
-![MatrixCast hero image](docs/images/matrixcast-hero.jpg)
+<!-- IMAGE PLACEHOLDER: Replace with a hero photo of the completed SmartHUB75 display. -->
+![SmartHUB75 hero image](docs/images/smarthub75-hero.jpg)
 
 ## Features
 
@@ -14,6 +14,7 @@ The display is designed for glanceable information: the normal view shows time, 
 - Local temperature and humidity from an SHTC3 sensor
 - Live weather from OpenWeather, including condition, temperature, humidity, and wind data
 - QR-code Wi-Fi provisioning through an on-device SoftAP
+- Startup screen showing `SmartHUB75` and `CONNECTING WIFI...` when saved Wi-Fi credentials are being used
 - Embedded browser dashboard for status, settings, and brightness control
 - Persistent city, API key, and timezone settings in ESP-IDF NVS
 - Double-buffered rendering, 8 MHz output clock, and a 120 Hz minimum panel refresh rate
@@ -74,7 +75,7 @@ Verify the pinout, voltage levels, scan type, and power requirements for the exa
 
 ## Software stack
 
-MatrixCast is an ESP-IDF project written in C and C++. The main component uses:
+SmartHUB75 is an ESP-IDF project written in C and C++. The main component uses:
 
 - `esphome/esp-hub75` for DMA-backed HUB75 output
 - `pedrominatel/shtc3` for the local climate sensor
@@ -115,13 +116,13 @@ idf.py -p COM<n> erase-flash
 idf.py -p COM<n> flash monitor
 ```
 
-Erasing flash removes the provisioned network and saved MatrixCast settings.
+Erasing flash removes the provisioned network and saved SmartHUB75 settings.
 
 ## First-time setup
 
 1. Power on the device.
-2. On first boot, MatrixCast starts a provisioning SoftAP and renders a Wi-Fi QR code on the LED panel.
-3. Scan the QR code with a compatible ESP-IDF provisioning application, or connect to the displayed `MatrixCast-XXXX` access point and complete provisioning.
+2. On first boot, SmartHUB75 starts a provisioning SoftAP and renders a Wi-Fi QR code on the LED panel.
+3. Scan the QR code with a compatible ESP-IDF provisioning application, or connect to the displayed `SmartHUB75-XXXX` access point and complete provisioning.
 4. After the device receives an IP address, open `http://<device-ip>/` in a browser.
 5. Set the city, POSIX timezone, and OpenWeather API key in the Device settings section.
 6. Refresh the dashboard and confirm that time synchronization and weather are online.
@@ -141,7 +142,7 @@ Use a POSIX timezone string, such as `IST-5:30` or `UTC0`. The weather task refr
 
 ## Browser dashboard
 
-Open the device IP address in a browser to use the built-in MatrixCast control center. It provides:
+Open the device IP address in a browser to use the built-in SmartHUB75 control center. It provides:
 
 - Brightness control from 1 to 75
 - NTP synchronization status
@@ -282,4 +283,4 @@ RGB matrix panels can draw substantial current, especially at high brightness. U
 
 ## License
 
-MatrixCast is released under the [MIT License](LICENSE). Copyright © 2026 Divyanshu4fx.
+SmartHUB75 is released under the [MIT License](LICENSE). Copyright © 2026 Divyanshu4fx.

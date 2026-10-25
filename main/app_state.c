@@ -15,6 +15,7 @@ uint8_t g_brightness = 75;
 uint8_t g_applied_brightness = 0;
 bool g_provisioning_active = false;
 bool g_provisioning_qr_ready = false;
+bool g_wifi_startup_active = false;
 uint8_t g_provisioning_qr[PROVISIONING_QR_MAX_SIZE][PROVISIONING_QR_MAX_SIZE];
 uint8_t g_provisioning_qr_size = 0;
 

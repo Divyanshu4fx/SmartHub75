@@ -56,6 +56,7 @@ extern uint8_t g_applied_brightness;
 extern EventGroupHandle_t settings_events;
 extern bool g_provisioning_active;
 extern bool g_provisioning_qr_ready;
+extern bool g_wifi_startup_active;
 extern uint8_t g_provisioning_qr[PROVISIONING_QR_MAX_SIZE][PROVISIONING_QR_MAX_SIZE];
 extern uint8_t g_provisioning_qr_size;
 

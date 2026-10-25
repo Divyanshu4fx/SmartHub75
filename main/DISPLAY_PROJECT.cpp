@@ -89,6 +89,7 @@ void display_task(void *arg)
 
         xSemaphoreTake(data_mutex, portMAX_DELAY);
         bool provisioning_active = g_provisioning_active;
+        bool wifi_startup_active = g_wifi_startup_active;
         if (g_flightActive && (nowMs - g_flightStartMs >= FLIGHT_DISPLAY_MS))
             g_flightActive = false;
         bool flight_active = g_flightActive;
@@ -104,6 +105,10 @@ void display_task(void *arg)
         if (provisioning_active)
         {
             drawProvisioningQr();
+        }
+        else if (wifi_startup_active)
+        {
+            drawWifiStartup();
         }
         else
         {
