@@ -263,7 +263,7 @@ void drawProvisioningQr(void)
 void drawWifiStartup(void)
 {
     drawCentered("Smart", 20, DISPLAY_MY_CYAN, true);
-    drawCentered("Matrix", 26, DISPLAY_MY_CYAN, true);
+    drawCentered("Matrix", 28, DISPLAY_MY_CYAN, true);
     drawCentered("CONNECTING", 38, DISPLAY_WHITE, false);
     drawCentered("WIFI...", 47, DISPLAY_LIGHT_BLUE, false);
 }
