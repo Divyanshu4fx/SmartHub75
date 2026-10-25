@@ -136,7 +136,7 @@ The default settings are:
 Use a POSIX timezone string, such as `IST-5:30` or `UTC0`. The weather task refreshes data every ten minutes and also reacts to saved settings changes.
 
 <!-- IMAGE PLACEHOLDER: Add a photo or screenshot showing the QR provisioning screen. -->
-![Wi-Fi provisioning QR code](https://github.com/Divyanshu4fx/SmartHub75/blob/main/images/2.jpeg)
+![Wi-Fi provisioning QR code](https://github.com/Divyanshu4fx/SmartHub75/blob/main/images/6.jpeg)
 
 ## Browser dashboard
 
