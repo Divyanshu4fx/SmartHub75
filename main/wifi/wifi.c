@@ -1,5 +1,6 @@
 #include "wifi.h"
 #include "qrcode.h"
+#include "mdns.h"
 
 static EventGroupHandle_t s_wifi_event_group;
 static int s_retry_num = 0;
@@ -107,6 +108,15 @@ void initialize_wifi(void)
     }
 
     xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    EventBits_t wifi_bits = xEventGroupGetBits(s_wifi_event_group);
+    if ((wifi_bits & WIFI_CONNECTED_BIT) != 0)
+    {
+        ESP_ERROR_CHECK(mdns_init());
+        ESP_ERROR_CHECK(mdns_hostname_set("smartMatrix"));
+        ESP_ERROR_CHECK(mdns_instance_name_set("SmartHUB75"));
+        ESP_ERROR_CHECK(mdns_service_add("SmartHUB75 HTTP", "_http", "_tcp", 80, NULL, 0));
+        ESP_LOGI("wifi", "mDNS available at http://smartMatrix.local/");
+    }
     xSemaphoreTake(data_mutex, portMAX_DELAY);
     g_wifi_startup_active = false;
     xSemaphoreGive(data_mutex);

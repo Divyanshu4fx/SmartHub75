@@ -15,6 +15,7 @@ The display is designed for glanceable information: the normal view shows time, 
 - Live weather from OpenWeather, including condition, temperature, humidity, and wind data
 - QR-code Wi-Fi provisioning through an on-device SoftAP
 - Startup screen showing `SmartHUB75` and `CONNECTING WIFI...` when saved Wi-Fi credentials are being used
+- mDNS hostname `smartMatrix.local` for browser and REST API access without finding the device IP
 - Embedded browser dashboard for status, settings, and brightness control
 - Persistent city, API key, and timezone settings in ESP-IDF NVS
 - Double-buffered rendering, 8 MHz output clock, and a 120 Hz minimum panel refresh rate
@@ -123,7 +124,7 @@ Erasing flash removes the provisioned network and saved SmartHUB75 settings.
 1. Power on the device.
 2. On first boot, SmartHUB75 starts a provisioning SoftAP and renders a Wi-Fi QR code on the LED panel.
 3. Scan the QR code with a compatible ESP-IDF provisioning application, or connect to the displayed `SmartHUB75-XXXX` access point and complete provisioning.
-4. After the device receives an IP address, open `http://<device-ip>/` in a browser.
+4. After the device receives an IP address, open `http://smartMatrix.local/` in a browser. If mDNS is unavailable on your network, use `http://<device-ip>/`.
 5. Set the city, POSIX timezone, and OpenWeather API key in the Device settings section.
 6. Refresh the dashboard and confirm that time synchronization and weather are online.
 
@@ -151,7 +152,7 @@ Open the device IP address in a browser to use the built-in SmartHUB75 control c
 - OpenWeather API key update
 - Current or most recently received flight information
 
-The dashboard is served directly by the ESP32-S3; it does not require a separate web server or mobile application.
+The dashboard is served directly by the ESP32-S3; it does not require a separate web server or mobile application. The device advertises its HTTP service through mDNS as `smartMatrix.local`.
 
 ## REST API
 
