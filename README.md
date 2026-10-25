@@ -5,7 +5,7 @@ SmartHUB75 is an ESP32-S3 smart dashboard for a 64x64 HUB75 RGB LED matrix. It c
 The display is designed for glanceable information: the normal view shows time, date, indoor climate, and outdoor weather, while a flight event temporarily replaces the lower dashboard area with aircraft pixel art, callsign/model information, and scrolling origin and destination marquees.
 
 <!-- IMAGE PLACEHOLDER: Replace with a hero photo of the completed SmartHUB75 display. -->
-![SmartHUB75 hero image](docs/images/smarthub75-hero.jpg)
+![SmartHUB75 hero image](https://github.com/Divyanshu4fx/SmartHub75/blob/main/images/4.jpeg)
 
 ## Features
 
@@ -25,10 +25,10 @@ The display is designed for glanceable information: the normal view shows time, 
 - Automatic return to the normal dashboard after a 30-second flight display
 
 <!-- IMAGE PLACEHOLDER: Add a screenshot of the normal clock/weather dashboard. -->
-![Normal dashboard view](docs/images/dashboard-normal.jpg)
+![Normal dashboard view](https://github.com/Divyanshu4fx/SmartHub75/blob/main/images/3.jpeg)
 
 <!-- IMAGE PLACEHOLDER: Add a screenshot of the flight overlay with route marquees. -->
-![Flight overlay view](docs/images/dashboard-flight.jpg)
+![Flight overlay view](https://github.com/Divyanshu4fx/SmartHub75/blob/main/images/2.jpeg)
 
 ## Hardware
 
@@ -70,9 +70,6 @@ The SHTC3 uses the ESP-IDF I2C master driver:
 | SCL | 48 |
 
 Verify the pinout, voltage levels, scan type, and power requirements for the exact panel and ESP32-S3 board before connecting hardware. Do not power the LED panel from the ESP32-S3 3.3 V rail.
-
-<!-- IMAGE PLACEHOLDER: Add a labeled wiring diagram for the ESP32-S3, HUB75 panel, and SHTC3. -->
-![Wiring diagram](docs/images/wiring-diagram.png)
 
 ## Software stack
 
@@ -139,7 +136,7 @@ The default settings are:
 Use a POSIX timezone string, such as `IST-5:30` or `UTC0`. The weather task refreshes data every ten minutes and also reacts to saved settings changes.
 
 <!-- IMAGE PLACEHOLDER: Add a photo or screenshot showing the QR provisioning screen. -->
-![Wi-Fi provisioning QR code](docs/images/wifi-provisioning.jpg)
+![Wi-Fi provisioning QR code](https://github.com/Divyanshu4fx/SmartHub75/blob/main/images/2.jpeg)
 
 ## Browser dashboard
 
