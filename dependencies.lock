@@ -25,6 +25,13 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.7.19~2
+  espressif/qrcode:
+    component_hash: 31e70991ce22f28d73a4386417fc9c0993f61e1aab1832474fd9e3db8da9dcbd
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.2.0
   idf:
     source:
       type: idf
@@ -42,8 +49,9 @@ dependencies:
 direct_dependencies:
 - esphome/esp-hub75
 - espressif/cjson
+- espressif/qrcode
 - idf
 - pedrominatel/shtc3
-manifest_hash: 95be04d497499ff10bd9d8afa4d5339a5e7e29ba1e5f7934adbbde1e6b4f51c4
+manifest_hash: 5dc861d8043973c60e85a8ef6b8c754f0c6284f994bec8ca10c2942f43766c62
 target: esp32s3
 version: 2.0.0

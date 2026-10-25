@@ -17,3 +17,4 @@ dependencies:
   esphome/esp-hub75: ^0.3.6
   pedrominatel/shtc3: ^1.4.2
   espressif/cjson: ^1.7.19~2
+  espressif/qrcode: ^0.2.0
