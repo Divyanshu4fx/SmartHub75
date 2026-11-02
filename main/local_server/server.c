@@ -5,10 +5,49 @@
 
 #include "esp_log.h"
 
+// #define API_SECRET_KEY ""
+
 #define BUFF_SIZE 512
 #define WEATHER_URL_MAX 384
 static char response_buf[BUFF_SIZE];
 static int response_len = 0;
+
+// static bool is_hmac_authorized(httpd_req_t *req, const char *payload, size_t payload_len)
+// {
+//     char sig_header[65];
+//     char ts_header[16];
+    
+//     if (httpd_req_get_hdr_value_str(req, "X-Signature", sig_header, sizeof(sig_header)) != ESP_OK ||
+//         httpd_req_get_hdr_value_str(req, "X-Timestamp", ts_header, sizeof(ts_header)) != ESP_OK)
+//     {
+//         return false;
+//     }
+
+//     long ts = atol(ts_header);
+//     long now = time(NULL);
+//     if (abs(now - ts) > 300) return false;
+
+//     mbedtls_md_context_t ctx;
+//     mbedtls_md_init(&ctx);
+//     mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), 1);
+//     mbedtls_md_hmac_starts(&ctx, (const unsigned char *)API_SECRET_KEY, strlen(API_SECRET_KEY));
+    
+//     mbedtls_md_hmac_update(&ctx, (const unsigned char *)ts_header, strlen(ts_header));
+//     mbedtls_md_hmac_update(&ctx, (const unsigned char *)".", 1);
+//     mbedtls_md_hmac_update(&ctx, (const unsigned char *)payload, payload_len);
+    
+//     unsigned char hmac_result[32];
+//     mbedtls_md_hmac_finish(&ctx, hmac_result);
+//     mbedtls_md_free(&ctx);
+
+//     // Convert binary result to hex string
+//     char computed_sig[65];
+//     for (int i = 0; i < 32; i++) {
+//         snprintf(&computed_sig[i * 2], 3, "%02x", hmac_result[i]);
+//     }
+
+//     return (strcmp(sig_header, computed_sig) == 0);
+// }
 
 static void copy_url_value(char *destination, size_t capacity, const char *source)
 {
@@ -56,7 +95,7 @@ void http_get_weather_task(void *arg)
         char url[WEATHER_URL_MAX];
         copy_url_value(city, sizeof(city), settings.city);
         int url_length = snprintf(url, sizeof(url),
-                                  "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=%s",
+                                  "https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=%s",
                                   city, settings.api_key, OWM_UNITS);
         if (url_length < 0 || (size_t)url_length >= sizeof(url))
         {
@@ -348,6 +387,14 @@ static esp_err_t post_flight_handler(httpd_req_t *req)
     if ((ret = httpd_req_recv(req, buf, remaining)) <= 0)
         return ESP_FAIL;
     buf[ret] = '\0';
+
+    if (!is_hmac_authorized(req, buf, ret))
+    {
+        httpd_resp_set_status(req, "401 Unauthorized");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "{\"error\":\"invalid signature\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_FAIL;
+    }
 
     cJSON *json = cJSON_Parse(buf);
     if (!json)

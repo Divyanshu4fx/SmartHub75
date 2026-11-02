@@ -1,0 +1,5 @@
+{
+    "idf.currentSetup": "/home/omen/esp/esp-idf",
+    "idf.flashType": "UART",
+    "idf.port": "/dev/ttyACM0"
+}

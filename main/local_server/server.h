@@ -1,6 +1,7 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <stdlib.h>
 #include "app_state.h"
 #include "settings.h"
 #include "esp_http_client.h"
@@ -10,6 +11,7 @@
 #include "esp_sntp.h"
 #include "esp_event.h"
 #include "esp_timer.h"
+#include "mbedtls/md.h"
 #include "cJSON.h"
 #include "time.h"
 
